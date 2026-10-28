@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoKm - Controle de Consumo & Combustível (Fan 2013)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-emerald-500/20 selection:text-emerald-300">
+
+  <!-- TOPO / CABEÇALHO COM ABAS -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-md shadow-emerald-500/10">
+          ⛽
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-lg font-bold tracking-tight text-white">AutoKm</span>
+          <span class="text-xs font-semibold text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+            🏍️ Fan 2013
+          </span>
+        </div>
+      </div>
+
+      <!-- Abas Centrais de Navegação -->
+      <nav class="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs">
+        <button onclick="trocarAba('dashboard')" id="nav-btn-dashboard" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all cursor-pointer">
+          <span>📊 Painel Geral</span>
+        </button>
+        <button onclick="trocarAba('tabela')" id="nav-btn-tabela" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all cursor-pointer">
+          <span>📋 Abastecimentos</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono font-bold" id="badge-total-regs">2</span>
+        </button>
+        <button onclick="trocarAba('simulador')" id="nav-btn-simulador" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all cursor-pointer">
+          <span>🧮 Simulador Km & Dias</span>
+        </button>
+        <button onclick="trocarAba('etanol')" id="nav-btn-etanol" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all cursor-pointer">
+          <span>⚖️ Etanol vs Gasolina</span>
+        </button>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <!-- Status de Sincronização em Nuvem (Clicável) -->
+        <button id="badge-cloud-status" onclick="forcarSincronizacao(true)" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer" title="Clique para sincronizar com a Nuvem agora">
+          <span id="dot-cloud-status" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span id="txt-cloud-status" class="text-slate-300 font-mono text-[11px] hidden sm:inline">Nuvem Conectada</span>
+        </button>
+        <!-- Botão de Sincronização -->
+        <button id="btn-sincronizar-topo" onclick="forcarSincronizacao(true)" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-teal-300 border border-teal-500/40 hover:border-teal-400 font-semibold px-3 py-2 rounded-xl text-xs sm:text-sm shadow-sm transition-all cursor-pointer" title="Sincronizar Celular e Computador">
+          <span>📲</span>
+          <span class="hidden sm:inline">Sincronização</span>
+          <span class="sm:hidden">Sync</span>
+        </button>
+        <button onclick="abrirModalNovo()" class="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs sm:text-sm shadow-sm transition-all cursor-pointer">
+          <span>+ Abastecer</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+
+    <!-- SPOTLIGHT BANNER COM PAINEL GAUGE E PREVISÃO (EXATAMENTE COMO NO PRINT) -->
+    <div class="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div class="space-y-3 flex-1">
+          <!-- Badges de Status -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+              🏍️ HONDA FAN 2013 (Tanque ~15,1L)
+            </span>
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              CICLO ENCERRADO
+            </span>
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+              GASOLINA NOVA
+            </span>
+          </div>
+
+          <!-- Média da Moto -->
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              <span>Média da Fan 2013:</span>
+              <span class="font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800" id="banner-media">
+                33,2 km/L
+              </span>
+            </h2>
+          </div>
+
+          <!-- PAINEL: PREVISÃO EM DIAS + MOSTRADOR PGM-FI COM BARRINHA VISUAL DE TANQUE -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 my-2">
+            
+            <!-- CARD 1: 🔔 Previsão de Abastecimento (5 colunas) -->
+            <div class="lg:col-span-5 bg-slate-950/85 border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-amber-500/50 transition-all">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-lg text-amber-400 shrink-0">
+                      🔔
+                    </div>
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 block font-mono">
+                        PREVISÃO DE ABASTECIMENTO
+                      </span>
+                      <span class="text-[11px] text-slate-400">Honda Fan 2013</span>
+                    </div>
+                  </div>
+                  <span class="text-[11px] font-mono font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800/80">
+                    ~33 km/dia útil
+                  </span>
+                </div>
+
+                <div>
+                  <div class="text-sm text-slate-300 font-medium">Próximo abastecimento previsto em:</div>
+                  <div class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-baseline gap-2 mt-0.5">
+                    <span class="text-amber-400 font-mono text-3xl sm:text-4xl" id="card-dias-restantes">~14</span>
+                    <span class="text-slate-200 text-lg sm:text-xl">dias</span>
+                    <span class="text-xs font-normal text-slate-400 font-sans" id="card-data-prevista">
+                      (10/11/2026)
+                    </span>
+                  </div>
+                </div>
+
+                <p class="text-xs text-slate-300 leading-relaxed bg-slate-900/80 rounded-xl p-2.5 border border-slate-800/80" id="card-dias-sub">
+                  Autonomia estimada restante para <strong class="text-white font-mono" id="card-autonomia-km">~452 km</strong>. Cobre tranquilamente seu trajeto diário de ida e volta ao trabalho.
+                </p>
+              </div>
+
+              <div class="flex items-center justify-between pt-3 mt-2 border-t border-slate-800/80 text-[11px] text-slate-400 font-mono">
+                <span>Custo/dia: <strong class="text-amber-300">~R$ 7,15</strong></span>
+                <span>Média base: <strong class="text-emerald-400">33,2 km/L</strong></span>
+              </div>
+            </div>
+
+            <!-- CARD 2: ⛽ Nível do Tanque com Mostrador PGM-FI e Barrinha Visual (7 colunas) -->
+            <div class="lg:col-span-7 bg-slate-950/85 border border-teal-500/30 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-teal-500/50 transition-all">
+              <div class="absolute top-0 right-0 w-40 h-40 bg-teal-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+              <div class="space-y-3">
+                <!-- Cabeçalho do Card de Tanque -->
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-lg text-teal-400 shrink-0">
+                      ⛽
+                    </div>
+                    <div>
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-teal-300 block font-mono">
+                        NÍVEL DO TANQUE
+                      </span>
+                      <span class="text-[11px] text-slate-400">Capacidade: 15,1 L (Reserva: 3 L)</span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <span id="badge-reserva-alerta" class="hidden px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
+                      ⚠️ Reserva (~3L)
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-teal-950/80 text-teal-300 border border-teal-800/80" id="card-porcentagem">
+                      90% do Tanque
+                    </span>
+                    <button type="button" onclick="abrirModalOdometro()" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-teal-950/80 hover:bg-teal-900 text-teal-300 border border-teal-700/80 transition-colors flex items-center gap-1 cursor-pointer active:scale-95" title="Atualizar KM atual do odômetro">
+                      <span>⚡</span>
+                      <span>Atualizar KM</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Mostrador PGM-FI Réplica Fiel Fan 2013 + Medição Visual -->
+                <div class="flex flex-col sm:flex-row items-center gap-4 pt-1">
+                  <!-- Dial Circular PGM-FI com Ponteiro Dinâmico -->
+                  <div class="relative shrink-0 flex flex-col items-center">
+                    <svg viewBox="0 0 140 105" class="w-28 sm:w-32 h-auto select-none drop-shadow-md">
+                      <defs>
+                        <radialGradient id="fanDialGrad" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stop-color="#0f172a" />
+                          <stop offset="100%" stop-color="#020617" />
+                        </radialGradient>
+                      </defs>
+
+                      <!-- Fundo Circular do Mostrador -->
+                      <circle cx="70" cy="72" r="50" fill="url(#fanDialGrad)" stroke="#1e293b" stroke-width="2" />
+                      
+                      <!-- Texto PGM-FI -->
+                      <text x="70" y="32" fill="#94a3b8" font-size="7" font-family="'JetBrains Mono', monospace" font-weight="800" text-anchor="middle" letter-spacing="1.2">
+                        PGM-FI
+                      </text>
+                      
+                      <!-- Arco da Escala -->
+                      <path d="M 36.3 46.7 A 44 44 0 0 1 103.7 46.7" fill="none" stroke="#334155" stroke-width="4.5" stroke-linecap="round" />
+                      
+                      <!-- Faixa Vermelha da Reserva (próximo ao E) -->
+                      <path d="M 91 37 A 44 44 0 0 1 103.7 46.7" fill="none" stroke="#ef4444" stroke-width="5.5" stroke-linecap="round" />
+                      
+                      <!-- Letras F e E -->
+                      <text x="24" y="50" fill="#f8fafc" font-size="11" font-weight="900" font-family="sans-serif" text-anchor="middle">
+                        F
+                      </text>
+                      <text x="116" y="50" fill="#ef4444" font-size="11" font-weight="900" font-family="sans-serif" text-anchor="middle">
+                        E
+                      </text>
+                      
+                      <!-- Traços (ticks) intermediários -->
+                      <line x1="51.4" y1="36" x2="49.5" y2="31" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round" />
+                      <line x1="70" y1="32" x2="70" y2="26" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round" />
+                      <line x1="88.6" y1="36" x2="90.5" y2="31" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round" />
+
+                      <!-- Ícone de Bomba de Combustível -->
+                      <g transform="translate(63.5, 43) scale(0.55)" fill="#64748b">
+                        <path d="M3 2v14h10V2H3zm8 12H5V4h6v10zm4-6h1a2 2 0 0 1 2 2v4a1 1 0 0 1-2 0v-4h-1v-2z" />
+                      </g>
+
+                      <!-- Ponteiro Laranja dinâmico da Fan 2013 -->
+                      <g id="ponteiro-svg" transform="rotate(-40, 70, 72)" style="transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                        <polygon points="68.8,72 71.2,72 70.6,35 69.4,35" fill="#f97316" />
+                        <line x1="70" y1="72" x2="70" y2="36" stroke="#fdba74" stroke-width="1.2" />
+                        <circle cx="70" cy="72" r="5.5" fill="#0f172a" stroke="#475569" stroke-width="1.5" />
+                        <circle cx="70" cy="72" r="2" fill="#ea580c" />
+                      </g>
+                    </svg>
+                    <span class="text-[9px] font-mono text-slate-400 mt-[-6px]">Mostrador Fan 2013</span>
+                  </div>
+
+                  <!-- Dados em Destaque e Barrinha Visual Segmentada -->
+                  <div class="flex-1 w-full space-y-2">
+                    <div class="flex items-baseline justify-between gap-2 flex-wrap">
+                      <div class="text-sm font-semibold text-slate-300">Combustível restante:</div>
+                      <div class="text-xl sm:text-2xl font-mono font-bold text-teal-300" id="card-litros-destaque">
+                        13,62 L <span class="text-sm font-normal text-slate-400" id="card-litros-pct">(90%)</span>
+                      </div>
+                    </div>
+
+                    <!-- Escala com pontos e divisões -->
+                    <div class="space-y-1.5 pt-0.5">
+                      <div class="flex items-center justify-between text-[10px] font-mono">
+                        <span class="text-rose-400 font-bold flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span>
+                          E (Reserva 3L)
+                        </span>
+                        <span class="text-slate-500">1/4</span>
+                        <span class="text-slate-500">1/2</span>
+                        <span class="text-slate-500">3/4</span>
+                        <span class="text-emerald-400 font-bold flex items-center gap-1">
+                          F (Cheio 15,1L)
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                        </span>
+                      </div>
+
+                      <!-- Trilho da Barrinha com Divisões -->
+                      <div class="relative w-full bg-slate-900 rounded-lg h-4 border border-slate-700/80 p-0.5 overflow-hidden shadow-inner">
+                        <!-- Linhas verticais transparentes de referência -->
+                        <div class="absolute inset-0 flex justify-between px-1 pointer-events-none opacity-25 z-10">
+                          <div class="border-r border-slate-400 h-full w-[20%]"></div>
+                          <div class="border-r border-slate-400 h-full w-[25%]"></div>
+                          <div class="border-r border-slate-400 h-full w-[25%]"></div>
+                          <div class="border-r border-slate-400 h-full w-[25%]"></div>
+                        </div>
+
+                        <!-- Barra de Preenchimento -->
+                        <div id="card-barra-combustivel" class="h-full rounded-md transition-all duration-700 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 shadow-md" style="width: 90%;"></div>
+                      </div>
+
+                      <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-0.5">
+                        <span id="info-consumido">Consumido: <strong class="text-slate-200">1,48 L</strong> (+49 km)</span>
+                        <span id="info-restante">Resta: <strong class="text-teal-300">13,62 L</strong> de 15,1 L</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rodapé do Card de Tanque -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-3 mt-2 border-t border-slate-800/80 text-[11px] text-slate-400 font-mono">
+                <span>Odômetro atual: <strong class="text-white hover:text-teal-300 hover:underline cursor-pointer transition-colors" onclick="abrirModalOdometro()" id="card-odo-atual" title="Clique para editar o odômetro">83.712 km</strong> <button type="button" onclick="abrirModalOdometro()" class="text-[10px] text-teal-400 hover:text-teal-300 ml-1.5 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 hover:border-teal-500 cursor-pointer">✏️ Editar</button></span>
+                <span class="text-slate-500">A barra e o ponteiro atualizam dinamicamente a cada KM</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Faixa inferior com dados do ciclo anterior -->
+          <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-1 border-t border-slate-800/60 font-mono">
+            <div>📍 Rodados no ciclo anterior: <strong class="text-white">231 km</strong></div>
+            <span class="text-slate-600">·</span>
+            <div>💰 Custo real: <strong class="text-amber-400">R$ 0,22 / km</strong></div>
+            <span class="text-slate-600">·</span>
+            <div>📅 Ritmo: <strong class="text-teal-300">28,9 km/dia (~R$ 6,25/dia)</strong></div>
+          </div>
+        </div>
+
+        <!-- Botões Laterais Rápidos (como no print) -->
+        <div class="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
+          <button type="button" onclick="abrirModalOdometro()" class="flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-teal-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-teal-500/40 hover:border-teal-400 rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-sm active:scale-95">
+            <span>⚙️ Ajustar Odômetro do Painel</span>
+          </button>
+          <button type="button" onclick="trocarAba('simulador')" class="flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl transition-colors cursor-pointer whitespace-nowrap shadow-sm shadow-emerald-500/20 active:scale-95">
+            <span>✨ Simular Próximos Trajetos</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OS 4 CARDS KPI DE RESUMO GERAL (EXATAMENTE COMO NO PRINT) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="cards-kpi">
+      <!-- 1. Consumo Médio -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-slate-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">CONSUMO MÉDIO</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+            ⚡
+          </div>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">33,2</span>
+            <span class="text-sm font-medium text-emerald-400">km/L</span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <span>Melhor: <strong class="font-mono text-slate-200">38,6</strong></span>
+            <span class="text-slate-600">·</span>
+            <span>Pior: <strong class="font-mono text-slate-200">33,2</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Custo por KM -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-slate-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">CUSTO POR KM</span>
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">
+            🪙
+          </div>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">R$ 0,22</span>
+            <span class="text-xs text-slate-400">/ km</span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <span>Preço Médio / L:</span>
+            <strong class="font-mono text-slate-200">R$ 7,09</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Distância & Combustível -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-slate-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">DISTÂNCIA & COMBUSTÍVEL</span>
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">
+            🛣️
+          </div>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">231</span>
+            <span class="text-sm font-medium text-blue-400">km total</span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <span>Litros Abastecidos:</span>
+            <strong class="font-mono text-slate-200">13,13 L</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Ritmo Diário & Gastos -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-slate-400 mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">RITMO DIÁRIO & GASTOS</span>
+          <div class="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center text-sm">
+            📅
+          </div>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-3xl font-bold font-mono tracking-tight text-white tabular-nums">28,9</span>
+            <span class="text-sm font-medium text-teal-400">km/dia</span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <span>Gasto Diário:</span>
+            <strong class="font-mono text-slate-200">~R$ 6,25 / dia</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 1: TABELA COMPLETA COM AMBOS OS ABASTECIMENTOS -->
+    <section id="aba-tabela" class="space-y-4">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold text-white">Registros de Abastecimento</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Clique em <strong>"✏️ Editar"</strong> para alterar o <strong>KM Atual</strong>, recalcular o quanto rodou ou marcar <strong>Tanque Cheio</strong>.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="pedirConfirmacaoRestaurar()" class="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-lg transition-colors cursor-pointer" title="Restaurar abastecimentos de 18/10 e 26/10">
+              🔄 Restaurar Originais
+            </button>
+            <button type="button" onclick="exportarCSV()" class="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-lg transition-colors cursor-pointer">
+              📥 Baixar CSV
+            </button>
+            <button type="button" onclick="abrirModalOdometro()" class="px-3 py-1.5 text-xs font-bold text-teal-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-teal-500/40 rounded-lg transition-colors cursor-pointer shadow-sm active:scale-95 flex items-center gap-1">
+              <span>⚡</span> <span>Ajustar Odômetro</span>
+            </button>
+            <button type="button" onclick="abrirModalNovo()" class="px-3.5 py-1.5 text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-lg transition-colors cursor-pointer shadow-sm active:scale-95 flex items-center gap-1">
+              <span>+</span> <span>Novo Abastecimento</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-950/60 border-b border-slate-800 text-slate-400 uppercase text-[10px] font-semibold">
+                <th class="py-3 px-4">DATA & STATUS</th>
+                <th class="py-3 px-3">KM INICIAL</th>
+                <th class="py-3 px-3">KM ATUAL</th>
+                <th class="py-3 px-3">KM RODADOS</th>
+                <th class="py-3 px-3">GASOLINA CONSUMIDA</th>
+                <th class="py-3 px-3">LITROS / TOTAL</th>
+                <th class="py-3 px-3 text-center">CONSUMO (KM/L)</th>
+                <th class="py-3 px-3">CUSTO/KM</th>
+                <th class="py-3 px-3 text-center">AÇÕES</th>
+              </tr>
+            </thead>
+            <tbody id="corpo-tabela" class="divide-y divide-slate-800/60 font-mono"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 2: SIMULADOR KM & DIAS -->
+    <section id="aba-simulador" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white">Simulador: "Coloquei X valor"</h3>
+            <p class="text-xs text-slate-400">Descubra quantos km vai rodar e quantos dias vai durar.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Valor do Abastecimento (R$)</label>
+            <div class="flex gap-2 mb-2">
+              <button onclick="setSimValor(30)" class="flex-1 py-1 text-xs font-mono rounded border border-slate-800 bg-slate-950 text-slate-400 hover:text-white cursor-pointer">R$ 30</button>
+              <button onclick="setSimValor(42.99)" class="flex-1 py-1 text-xs font-mono rounded border border-slate-800 bg-slate-950 text-slate-400 hover:text-white cursor-pointer">R$ 42,99</button>
+              <button onclick="setSimValor(50)" class="flex-1 py-1 text-xs font-mono rounded border border-slate-800 bg-slate-950 text-slate-400 hover:text-white cursor-pointer">R$ 50</button>
+              <button onclick="setSimValor(108)" class="flex-1 py-1 text-xs font-mono rounded border border-emerald-800/60 bg-emerald-950/40 text-emerald-300 hover:text-white font-bold cursor-pointer" title="Encher o tanque todo (15,1 L a R$ 7,19)">Tanque Cheio (~R$ 108)</button>
+            </div>
+            <input type="number" id="sim-valor" value="42.99" step="1" oninput="calcularSimulador()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Preço do Litro (R$/L)</label>
+            <input type="number" id="sim-preco" value="7.19" step="0.01" oninput="calcularSimulador()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Média da Fan 2013 (km/L)</label>
+            <input type="number" id="sim-kml" value="33.2" step="0.1" oninput="calcularSimulador()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Quantos km roda por dia? (km/dia)</label>
+            <input type="number" id="sim-kmdia" value="33" step="1" oninput="calcularSimulador()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-xl p-6 flex flex-col justify-between">
+          <div>
+            <h4 class="text-sm font-bold text-white pb-3 border-b border-slate-800">Resultado da Autonomia</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5">
+              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                <span class="text-xs text-slate-400">Autonomia Prevista</span>
+                <div class="text-3xl font-bold font-mono text-emerald-400 mt-1" id="res-autonomia">198 km</div>
+                <span class="text-[11px] text-slate-500" id="res-litros">5,98 Litros</span>
+              </div>
+              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                <span class="text-xs text-slate-400">Duração Estimada</span>
+                <div class="text-3xl font-bold font-mono text-teal-300 mt-1" id="res-dias">6,0 dias</div>
+                <span class="text-[11px] text-slate-500">no trajeto diário de trabalho</span>
+              </div>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between py-1.5 border-b border-slate-800">
+                <span class="text-slate-400">Custo por km rodado:</span>
+                <span class="font-mono text-white font-semibold" id="res-custokm">R$ 0,22 / km</span>
+              </div>
+              <div class="flex justify-between py-1.5 border-b border-slate-800">
+                <span class="text-slate-400">Custo diário:</span>
+                <span class="font-mono text-white font-semibold" id="res-custodia">R$ 7,16 / dia</span>
+              </div>
+              <div class="flex justify-between py-1.5 border-b border-slate-800">
+                <span class="text-slate-400">Previsão para acabar o combustível:</span>
+                <span class="font-mono text-emerald-300 font-semibold" id="res-datafim">01/11/2026</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 bg-emerald-950/30 border border-emerald-800/50 rounded-lg p-3 text-xs text-emerald-200">
+            💡 <strong>Dica da Fan 2013:</strong> Com o tanque de 15,1 L totalmente cheio e média de 33,2 km/L, ela alcança até <strong>501 km</strong> de autonomia (~15 dias de trabalho)!
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 3: COMPARADOR ETANOL VS GASOLINA -->
+    <section id="aba-etanol" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white">Comparador Etanol x Gasolina</h3>
+            <p class="text-xs text-slate-400">Descubra qual vale mais a pena abastecer hoje.</p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Preço da Gasolina (R$/L)</label>
+            <input type="number" id="comp-gas" value="7.19" step="0.01" oninput="calcularEtanol()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Preço do Etanol (R$/L)</label>
+            <input type="number" id="comp-eta" value="4.59" step="0.01" oninput="calcularEtanol()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between">
+          <div>
+            <div id="box-veredito" class="p-4 rounded-xl border bg-blue-950/40 border-blue-800 text-blue-200 mb-4">
+              <span class="text-xs font-bold uppercase tracking-wider block opacity-75">Recomendação</span>
+              <h3 class="text-xl font-extrabold mt-0.5" id="txt-veredito">Abasteça com ETANOL</h3>
+              <p class="text-xs mt-1 opacity-90" id="txt-paridade">O etanol está a 63,8% do preço da gasolina (abaixo dos 70%).</p>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between py-1.5 border-b border-slate-800">
+                <span class="text-slate-400">Preço máximo do Etanol para compensar:</span>
+                <span class="font-mono text-white font-semibold" id="txt-preco-max">R$ 5,03</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD DE CONTROLE DE TROCA DE ÓLEO (HONDA FAN 2013) -->
+    <div class="bg-gradient-to-br from-slate-900/90 via-slate-900 to-amber-950/20 border border-amber-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden" id="card-troca-oleo">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-2xl text-amber-400 shrink-0">
+            🛢️
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base sm:text-lg font-bold text-white">Controle de Troca de Óleo</h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
+                Fan 2013 (10W-30)
+              </span>
+            </div>
+            <p class="text-xs text-slate-400">Acompanhamento preventivo do motor com alerta de quilometragem.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="abrirModalOleo()" class="px-3.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 shadow-sm">
+            ⚙️ Ajustar KM da Troca
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+        <!-- Status e KM restante -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <span class="text-xs text-slate-400 font-medium">Próxima Troca Prevista:</span>
+          <div class="mt-1">
+            <div class="text-2xl sm:text-3xl font-extrabold font-mono text-amber-400 cursor-pointer hover:underline hover:text-amber-300 transition-colors" onclick="abrirModalOleo()" id="oleo-km-meta" title="Clique para alterar a meta de troca de óleo">84.400 km</div>
+            <div class="text-xs text-slate-400 mt-0.5">Odômetro do painel da moto (clique para alterar)</div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 text-xs text-slate-300 flex justify-between font-mono">
+            <span>KM Atual:</span>
+            <strong class="text-white hover:text-teal-300 hover:underline cursor-pointer transition-colors" onclick="abrirModalOdometro()" id="oleo-km-atual" title="Clique para atualizar o odômetro">83.712 km</strong>
+          </div>
+        </div>
+
+        <!-- Faltam X KM / Dias -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <span class="text-xs text-slate-400 font-medium">Faltam para Trocar:</span>
+          <div class="mt-1">
+            <div class="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-400" id="oleo-km-restante">688 km</div>
+            <div class="text-xs text-teal-300 mt-0.5" id="oleo-dias-restante">~21 dias úteis de trabalho</div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 text-xs text-slate-400 flex justify-between font-mono">
+            <span>Data prevista:</span>
+            <strong class="text-amber-300" id="oleo-data-prevista">--/--/----</strong>
+          </div>
+        </div>
+
+        <!-- Especificação recomendada Fan 2013 -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <span class="text-xs text-slate-400 font-medium">Especificação do Óleo:</span>
+          <div class="space-y-1 mt-1 text-xs text-slate-300">
+            <div>Óleo: <strong class="text-white font-mono">SAE 10W-30 JASO MA</strong></div>
+            <div>Capacidade: <strong class="text-amber-300 font-mono">1.000 ml</strong> (troca comum)</div>
+            <div>Intervalo seguro: <strong class="text-emerald-400 font-mono">a cada 1.000 km</strong></div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 text-xs text-slate-400">
+            Dica: checar nível na vareta semanalmente.
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de progresso visual do óleo -->
+      <div class="mt-5 space-y-2">
+        <div class="flex items-center justify-between text-xs font-mono">
+          <span class="text-slate-400">Última troca (~83.400 km)</span>
+          <span class="text-amber-400 font-bold" id="oleo-progresso-txt">31% rodados (688 km restantes)</span>
+          <span class="text-white font-bold">Meta: 84.400 km</span>
+        </div>
+        <div class="relative w-full bg-slate-950 rounded-full h-3 border border-slate-800 overflow-hidden">
+          <div id="oleo-barra-progresso" class="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 shadow-md" style="width: 31%;"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL EDITÁVEL DE ABASTECIMENTO COM MARCADOR DE TANQUE CHEIO -->
+  <div id="modal-abastecer" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto" onclick="if(event.target===this) fecharModal()">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 text-slate-100 shadow-2xl space-y-4 my-8" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div>
+          <h3 class="text-base font-bold text-white" id="modal-titulo">Editar Abastecimento</h3>
+          <p class="text-xs text-slate-400">Altere o KM Atual ou marque se completou o tanque para recalcular.</p>
+        </div>
+        <button type="button" onclick="fecharModal()" class="text-slate-400 hover:text-white text-2xl px-2 py-1 cursor-pointer leading-none">&times;</button>
+      </div>
+
+      <form id="form-abastecer" onsubmit="salvarAbastecimento(event)" class="space-y-4">
+        <!-- Situação do Combustível -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+          <label class="block text-xs font-semibold text-slate-300">Situação deste Abastecimento:</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-800 bg-slate-900 cursor-pointer">
+              <input type="radio" name="situacao" id="radio-atual" value="atual" onchange="toggleSituacao()" class="text-teal-500 focus:ring-teal-500">
+              <div>
+                <strong class="text-teal-300 block">Gasolina Nova (Em uso)</strong>
+                <span class="text-[10px] text-slate-400">Combustível ativo no tanque</span>
+              </div>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg border border-slate-800 bg-slate-900 cursor-pointer">
+              <input type="radio" name="situacao" id="radio-concluido" value="concluido" onchange="toggleSituacao()" class="text-emerald-500 focus:ring-emerald-500">
+              <div>
+                <strong class="text-slate-200 block">Ciclo Concluído</strong>
+                <span class="text-[10px] text-slate-400">Tanque anterior já gasto</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- MARCADOR DE TANQUE CHEIO (15,1 L) -->
+        <div class="bg-gradient-to-r from-emerald-950/40 to-slate-950 p-3 rounded-xl border border-emerald-500/40 space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+              <span>⛽ O tanque ficou cheio com este abastecimento?</span>
+            </label>
+            <span class="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">15,1 L Fan 2013</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label id="label-tanque-cheio" class="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-500/50 bg-emerald-950/40 cursor-pointer shadow-sm shadow-emerald-500/10 transition-colors">
+              <input type="radio" name="tanqueCheio" id="radio-tanque-cheio" value="sim" onchange="toggleTanqueCheio()" class="text-emerald-500 focus:ring-emerald-500" checked>
+              <div>
+                <strong class="text-emerald-300 block">Sim, Tanque Cheio</strong>
+                <span class="text-[10px] text-slate-300">Completo (15,1 Litros)</span>
+              </div>
+            </label>
+
+            <label id="label-tanque-parcial" class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-800 bg-slate-900 cursor-pointer transition-colors">
+              <input type="radio" name="tanqueCheio" id="radio-tanque-parcial" value="nao" onchange="toggleTanqueCheio()" class="text-teal-500 focus:ring-teal-500">
+              <div>
+                <strong class="text-slate-300 block">Abastecimento Parcial</strong>
+                <span class="text-[10px] text-slate-400">Apenas os litros postos</span>
+              </div>
+            </label>
+          </div>
+
+          <p class="text-[11px] text-slate-300 bg-slate-950/70 p-2 rounded border border-slate-800/80 leading-relaxed" id="explicacao-tanque">
+            ✅ <strong>Tanque Cheio confirmado:</strong> A Fan 2013 agora está com a capacidade total de <strong>15,1 L</strong> no tanque. A autonomia total é de até <strong>~501 km</strong> (~15 dias de trabalho). Conforme você rodar, o sistema subtrairá a gasolina gasta dos 15,1 L totais.
+          </p>
+        </div>
+
+        <!-- Campos de Quilometragem -->
+        <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-3">
+          <div class="text-xs font-semibold text-white">Quilometragem do Odômetro (Painel da moto)</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-medium text-slate-300 mb-1">KM Inicial (ao abastecer)</label>
+              <input type="number" id="form-km-inicial" step="1" required oninput="atualizarCalculosAoVivo()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-emerald-400 mb-1">KM Atual (marcando agora)</label>
+              <input type="number" id="form-km-atual" step="1" required oninput="atualizarCalculosAoVivo()" class="w-full bg-slate-900 border border-emerald-500/60 rounded-lg px-3 py-2 text-xs text-emerald-300 font-mono font-bold focus:border-emerald-400 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Prévia instantânea do cálculo -->
+          <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 grid grid-cols-3 gap-2 text-center text-xs font-mono">
+            <div>
+              <span class="text-[10px] text-slate-400 block font-sans">Km Rodados</span>
+              <strong class="text-emerald-400" id="preview-km-rodados">+49 km</strong>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block font-sans">Gasolina Gasta</span>
+              <strong class="text-teal-300" id="preview-litros-consumidos">1,48 L</strong>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block font-sans" id="preview-label-restante">Resta no Tanque</span>
+              <strong class="text-amber-300" id="preview-litros-restantes">13,62 L</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloco de Campos Gerais -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Data</label>
+            <input type="date" id="form-data" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Valor Pago (R$)</label>
+            <input type="number" id="form-total" step="0.01" required oninput="aoMudarTotal()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Preço do Litro (R$)</label>
+            <input type="number" id="form-preco" step="0.01" required oninput="aoMudarPreco()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Litros Abastecidos</label>
+            <input type="number" id="form-litros" step="0.01" required oninput="aoMudarLitros()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none">
+          </div>
+        </div>
+
+        <!-- Bloco adicional se for ciclo concluído -->
+        <div id="bloco-concluido" class="hidden bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+          <label class="block text-xs font-medium text-slate-300">Quilometragem Total Rodada neste ciclo concluído (km)</label>
+          <input type="number" id="form-km-rodados-concluido" step="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Anotações / Descrição</label>
+          <input type="text" id="form-obs" placeholder="Ex: Gasolina nova com tanque cheio na Fan 2013" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="fecharModal()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-lg transition-colors shadow-sm cursor-pointer">
+            Salvar Abastecimento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE SINCRONIZAÇÃO PC <-> CELULAR -->
+  <div id="modal-sync" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 text-slate-100 shadow-2xl space-y-4 my-8">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+            📲
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Sincronizar PC & Celular</h3>
+            <p class="text-[11px] text-slate-400">Leve seus dados atualizados para o celular em segundos</p>
+          </div>
+        </div>
+        <button onclick="fecharModalSync()" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+      </div>
+
+      <!-- Status da Nuvem em Destaque -->
+      <div class="bg-gradient-to-r from-emerald-950/50 to-teal-950/50 border border-emerald-500/40 rounded-xl p-3.5 text-xs text-emerald-200/90 leading-relaxed space-y-2">
+        <div class="font-bold flex items-center gap-1.5 text-emerald-300">
+          <span>☁️ Sincronização em Nuvem em Tempo Real (Ativa!)</span>
+        </div>
+        <p>
+          O sistema está conectado ao banco de dados em nuvem. Qualquer abastecimento, alteração de KM ou troca de óleo feita no computador ou no celular é <strong>sincronizada automaticamente</strong> nos dois aparelhos via GitHub Pages!
+        </p>
+        <button id="btn-sync-modal-acao" onclick="forcarSincronizacao(false)" class="w-full mt-2 py-2 px-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-sm active:scale-95">
+          <span>🔄</span> <span>Forçar Sincronização Agora</span>
+        </button>
+      </div>
+
+      <!-- 3 Maneiras Rápidas de Sincronizar -->
+      <div class="space-y-3">
+        <!-- Método 1: QR Code direto -->
+        <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>📷 1. Escanear com a Câmera do Celular</span>
+            </span>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800 font-bold">Mais Rápido</span>
+          </div>
+          <div class="flex flex-col sm:flex-row items-center gap-4">
+            <div id="qrcode-container" class="bg-white p-2.5 rounded-xl shadow-md shrink-0 flex items-center justify-center min-w-[150px] min-h-[150px]">
+              <img id="qrcode-img" src="" alt="QR Code de Sincronização" class="w-36 h-36" />
+            </div>
+            <div class="space-y-2 text-xs text-slate-300">
+              <p>Abra a câmera do celular e aponte para o QR Code ao lado. A página abrirá no celular já com todos os seus abastecimentos sincronizados!</p>
+              <div class="flex flex-col gap-1.5">
+                <button onclick="copiarLinkSync()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors flex items-center justify-center gap-1 cursor-pointer">
+                  <span>🔗 Copiar Link de Sincronização</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Método 2: Baixar HTML com dados salvos -->
+        <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>💾 2. Baixar HTML Atualizado com Seus Dados</span>
+            </span>
+            <span class="text-[10px] font-mono text-teal-400 bg-teal-950 px-2 py-0.5 rounded border border-teal-800">Uso Offline</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Gera um novo arquivo <strong>autokm_atualizado.html</strong> com seus novos abastecimentos e odômetro gravados no código. Envie esse arquivo para o seu WhatsApp e abra no celular.
+          </p>
+          <button onclick="baixarHtmlAtualizado()" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-emerald-500/20">
+            <span>📥 Baixar autokm_atualizado.html</span>
+          </button>
+        </div>
+
+        <!-- Método 3: Copiar/Colar Código de Backup -->
+        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
+          <div>
+            <strong class="text-white block">3. Código de Backup (Copiar / Colar)</strong>
+            <span class="text-[11px] text-slate-400">Copie o texto no PC e cole no celular</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="copiarCodigoBackup()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors cursor-pointer">
+              Copiar
+            </button>
+            <button onclick="colarCodigoBackup()" class="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer">
+              Colar no Celular
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 flex justify-end">
+        <button type="button" onclick="fecharModalSync()" class="px-4 py-1.5 text-xs font-medium text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL RÁPIDO PARA AJUSTAR ODÔMETRO DO PAINEL (100% EDITÁVEL, SEM WINDOW.PROMPT) -->
+  <div id="modal-odometro" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto" onclick="if(event.target===this) fecharModalOdometro()">
+    <div class="bg-slate-900 border border-teal-500/40 rounded-2xl w-full max-w-md p-6 text-slate-100 shadow-2xl space-y-4 my-8" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-lg">
+            ⚡
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Ajustar Odômetro do Painel</h3>
+            <p class="text-xs text-slate-400">Atualize o KM atual da Fan 2013 em 1 clique</p>
+          </div>
+        </div>
+        <button type="button" onclick="fecharModalOdometro()" class="text-slate-400 hover:text-white text-2xl px-2 py-1 cursor-pointer leading-none">&times;</button>
+      </div>
+
+      <form id="form-odometro-rapido" onsubmit="salvarNovoOdometro(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Quilometragem Atual Marcada no Painel (km):
+          </label>
+          <div class="relative">
+            <input type="number" id="input-odometro-rapido" step="1" required oninput="atualizarPreviewOdometro()" class="w-full bg-slate-950 border-2 border-teal-500/60 rounded-xl px-4 py-3 text-2xl font-mono font-bold text-teal-300 focus:outline-none focus:border-teal-400 shadow-inner">
+            <span class="absolute right-4 top-4 text-xs font-mono text-slate-400">km</span>
+          </div>
+        </div>
+
+        <!-- Atalhos rápidos para somar km rodados -->
+        <div>
+          <span class="text-[11px] font-semibold text-slate-300 block mb-1.5">Atalhos rápidos para somar km ao odômetro:</span>
+          <div class="grid grid-cols-4 gap-2 text-xs font-mono">
+            <button type="button" onclick="adicionarKmOdometro(5)" class="py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold transition-all cursor-pointer active:scale-95">+5 km</button>
+            <button type="button" onclick="adicionarKmOdometro(10)" class="py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold transition-all cursor-pointer active:scale-95">+10 km</button>
+            <button type="button" onclick="adicionarKmOdometro(33)" class="py-2.5 rounded-lg bg-teal-950 hover:bg-teal-900 text-teal-300 border border-teal-700 font-bold transition-all cursor-pointer active:scale-95 shadow-sm" title="1 dia de trabalho">+33 km <span class="text-[9px] block font-sans text-teal-400/80">(1 dia)</span></button>
+            <button type="button" onclick="adicionarKmOdometro(66)" class="py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold transition-all cursor-pointer active:scale-95">+66 km <span class="text-[9px] block font-sans text-slate-400">(2 dias)</span></button>
+          </div>
+        </div>
+
+        <!-- Prévia do Recálculo -->
+        <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1.5 font-mono">
+          <div class="flex justify-between">
+            <span class="text-slate-400">KM Inicial do abastecimento:</span>
+            <strong class="text-slate-200" id="preview-odo-kmini">83.663 km</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Distância rodada neste tanque:</span>
+            <strong class="text-emerald-400 font-bold" id="preview-odo-kmrodados">+49 km</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Gasolina gasta estimada:</span>
+            <strong class="text-teal-300 font-bold" id="preview-odo-gastos">1,48 L</strong>
+          </div>
+          <div class="flex justify-between pt-1 border-t border-slate-800">
+            <span class="text-slate-300">Combustível restante no tanque:</span>
+            <strong class="text-amber-300 font-bold" id="preview-odo-restante">13,62 L (90%)</strong>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="fecharModalOdometro()" class="px-4 py-2.5 text-xs font-medium text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2.5 text-xs font-bold text-slate-950 bg-teal-400 hover:bg-teal-300 rounded-lg transition-colors cursor-pointer shadow-lg shadow-teal-500/20 active:scale-95">
+            Salvar no Painel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL RÁPIDO PARA AJUSTAR META DA TROCA DE ÓLEO (SEM WINDOW.PROMPT) -->
+  <div id="modal-oleo" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto" onclick="if(event.target===this) fecharModalOleo()">
+    <div class="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-md p-6 text-slate-100 shadow-2xl space-y-4 my-8" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-lg">
+            🛢️
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Meta de Troca de Óleo</h3>
+            <p class="text-xs text-slate-400">Configure o odômetro da próxima troca da Fan 2013</p>
+          </div>
+        </div>
+        <button type="button" onclick="fecharModalOleo()" class="text-slate-400 hover:text-white text-2xl px-2 py-1 cursor-pointer leading-none">&times;</button>
+      </div>
+
+      <form id="form-oleo-meta" onsubmit="salvarMetaOleo(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            KM da Próxima Troca (Meta no Odômetro):
+          </label>
+          <div class="relative">
+            <input type="number" id="input-meta-oleo" step="10" required class="w-full bg-slate-950 border-2 border-amber-500/60 rounded-xl px-4 py-3 text-2xl font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-300 shadow-inner">
+            <span class="absolute right-4 top-4 text-xs font-mono text-slate-400">km</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-[11px] font-semibold text-slate-300 block mb-1.5">Metas sugeridas:</span>
+          <div class="grid grid-cols-3 gap-2 text-xs font-mono">
+            <button type="button" onclick="setMetaOleoPreset(84400)" class="py-2.5 rounded-lg bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-600/60 font-bold transition-all cursor-pointer">84.400 km <span class="text-[9px] block text-amber-400/80 font-sans">(Sua meta)</span></button>
+            <button type="button" onclick="setMetaOleoPreset(84500)" class="py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold transition-all cursor-pointer">84.500 km</button>
+            <button type="button" onclick="setMetaOleoPreset(85000)" class="py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold transition-all cursor-pointer">85.000 km</button>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1 font-mono">
+          <div class="flex justify-between">
+            <span class="text-slate-400">KM Atual no Odômetro:</span>
+            <strong class="text-white" id="modal-oleo-kmatual">83.712 km</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Última Troca Feita:</span>
+            <strong class="text-slate-300" id="modal-oleo-kmultima">~83.400 km</strong>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="fecharModalOleo()" class="px-4 py-2.5 text-xs font-medium text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg transition-colors cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95">
+            Salvar Meta de Óleo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO (SEM WINDOW.CONFIRM) -->
+  <div id="modal-confirm" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto" onclick="if(event.target===this) fecharModalConfirm()">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 text-slate-100 shadow-2xl space-y-4 my-8" onclick="event.stopPropagation()">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl shrink-0" id="modal-confirm-icon">
+          ⚠️
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white" id="modal-confirm-titulo">Confirmar Ação</h3>
+          <p class="text-xs text-slate-300 mt-1 leading-relaxed" id="modal-confirm-mensagem">Deseja realmente continuar?</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <button type="button" onclick="fecharModalConfirm()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer">
+          Cancelar
+        </button>
+        <button type="button" id="modal-confirm-btn-acao" onclick="executarAcaoConfirmada()" class="px-4 py-2 text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-lg transition-colors cursor-pointer shadow-md">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFIER DE SINCRONIZAÇÃO EM NUVEM -->
+  <div id="toast-nuvem" class="fixed bottom-6 right-6 z-50 bg-emerald-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 text-xs transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none">
+    <span>☁️</span>
+    <span id="toast-nuvem-msg">Dados sincronizados da Nuvem!</span>
+  </div>
+
+  <!-- SCRIPT JS PRINCIPAL -->
+  <script>
+    const CAPACIDADE_TANQUE = 15.1; // Tanque da Honda CG Fan 2013
+
+    // DADOS INICIAIS COMPLETOS E REAIS: AMBOS OS ABASTECIMENTOS DA FAN 2013
+    const DADOS_INICIAIS = [
+      {
+        id: 'user-entry-1',
+        data: '2026-10-18',
+        isAtual: false,
+        kmInicial: 83432,
+        kmAtual: 83663,
+        odometro: 83432,
+        kmRodados: 231, // 83.663 - 83.432 = 231 km
+        litros: 7.15,
+        preco: 6.99,
+        total: 50.00,
+        mediaKml: 33.2,
+        custoKm: 0.22,
+        isTanqueCheio: false,
+        obs: '66 km serra + 165 km trabalho (5 dias x 33 km)'
+      },
+      {
+        id: 'user-entry-2',
+        data: '2026-10-26',
+        isAtual: true,
+        kmInicial: 83663,
+        kmAtual: 83712,
+        odometro: 83663,
+        kmRodados: 49, // 83.712 - 83.663 = 49 km
+        litros: 5.98,
+        preco: 7.19,
+        total: 42.99,
+        mediaKml: null,
+        custoKm: 0.22,
+        isTanqueCheio: true, // Tanque cheio informado pelo usuário
+        obs: 'Gasolina nova com tanque cheio na Fan 2013'
+      }
+    ];
+
+    // Carregamento resiliente: se a versão anterior do usuário tinha só 1 registro, restaura ambos!
+    let registros = null;
+
+    // 1. Checa se veio com link de sincronização do PC (?sync=...)
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const syncPayload = urlParams.get('sync');
+      if (syncPayload) {
+        const jsonStr = decodeURIComponent(escape(atob(syncPayload)));
+        const dadosImportados = JSON.parse(jsonStr);
+        if (Array.isArray(dadosImportados) && dadosImportados.length > 0) {
+          registros = dadosImportados;
+          localStorage.setItem('autokm_dados_v6', JSON.stringify(registros));
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch (e) {}
+        }
+      }
+    } catch (e) {
+      console.warn('Sync URL payload não encontrado ou inválido:', e);
+    }
+
+    // 2. Se não veio pela URL, lê do localStorage
+    if (!registros) {
+      try {
+        const stored = localStorage.getItem('autokm_dados_v6');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length >= 2 && parsed.some(r => r.data === '2026-10-18')) {
+            registros = parsed;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 3. Se ainda assim não houver, usa os DADOS_INICIAIS padrão
+    if (!registros) {
+      registros = JSON.parse(JSON.stringify(DADOS_INICIAIS));
+      localStorage.setItem('autokm_dados_v6', JSON.stringify(registros));
+    }
+
+    window.registros = registros;
+    let editandoIndex = null;
+    let metaKmOleo = parseFloat(localStorage.getItem('autokm_meta_oleo')) || 84400;
+    let ultimaTrocaKmOleo = parseFloat(localStorage.getItem('autokm_ultima_troca_oleo')) || 83400;
+    window.metaKmOleo = metaKmOleo;
+    window.ultimaTrocaKmOleo = ultimaTrocaKmOleo;
+
+    function salvarStorage(origem = 'usuario') {
+      window.registros = registros;
+      window.metaKmOleo = metaKmOleo;
+      window.ultimaTrocaKmOleo = ultimaTrocaKmOleo;
+      localStorage.setItem('autokm_dados_v6', JSON.stringify(registros));
+      localStorage.setItem('autokm_meta_oleo', metaKmOleo);
+      localStorage.setItem('autokm_ultima_troca_oleo', ultimaTrocaKmOleo);
+      if (typeof window.salvarNuvem === 'function') {
+        window.salvarNuvem(origem);
+      }
+    }
+
+    function restaurarDadosOriginais() {
+      if (confirm('Deseja restaurar os 2 abastecimentos originais da Fan 2013 (18/10 e 26/10)?')) {
+        registros = JSON.parse(JSON.stringify(DADOS_INICIAIS));
+        salvarStorage();
+        renderizar();
+        alert('Abastecimentos originais restaurados com sucesso!');
+      }
+    }
+
+    function formatarMoeda(val) {
+      return (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatarNumero(val, casas = 1) {
+      return (val || 0).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
+    }
+
+    function formatarData(dataStr) {
+      if (!dataStr) return '';
+      const p = dataStr.split('-');
+      return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : dataStr;
+    }
+
+    function trocarAba(aba) {
+      document.getElementById('aba-tabela').classList.toggle('hidden', aba !== 'tabela' && aba !== 'dashboard');
+      document.getElementById('aba-simulador').classList.toggle('hidden', aba !== 'simulador');
+      document.getElementById('aba-etanol').classList.toggle('hidden', aba !== 'etanol');
+
+      const tabs = ['dashboard', 'tabela', 'simulador', 'etanol'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('nav-btn-' + t);
+        if (btn) {
+          if (t === aba) {
+            btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all cursor-pointer';
+          } else {
+            btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all cursor-pointer';
+          }
+        }
+      });
+    }
+
+    function toggleSituacao() {
+      const isAtual = document.getElementById('radio-atual').checked;
+      const bloco = document.getElementById('bloco-concluido');
+      if (isAtual) {
+        bloco.classList.add('hidden');
+      } else {
+        bloco.classList.remove('hidden');
+      }
+      atualizarCalculosAoVivo();
+    }
+
+    function toggleTanqueCheio() {
+      const isCheio = document.getElementById('radio-tanque-cheio').checked;
+      const labelCheio = document.getElementById('label-tanque-cheio');
+      const labelParcial = document.getElementById('label-tanque-parcial');
+      const exp = document.getElementById('explicacao-tanque');
+
+      if (isCheio) {
+        labelCheio.className = 'flex items-center gap-2 p-2.5 rounded-lg border border-emerald-500/50 bg-emerald-950/40 cursor-pointer shadow-sm shadow-emerald-500/10 transition-colors';
+        labelParcial.className = 'flex items-center gap-2 p-2.5 rounded-lg border border-slate-800 bg-slate-900 cursor-pointer transition-colors';
+        exp.innerHTML = `✅ <strong>Tanque Cheio confirmado:</strong> A Fan 2013 agora está com a capacidade total de <strong>15,1 L</strong> no tanque. A autonomia total é de até <strong>~501 km</strong> (~15 dias de trabalho). Conforme você rodar, o sistema subtrairá a gasolina gasta dos 15,1 L totais.`;
+      } else {
+        labelCheio.className = 'flex items-center gap-2 p-2.5 rounded-lg border border-slate-800 bg-slate-900 cursor-pointer transition-colors';
+        labelParcial.className = 'flex items-center gap-2 p-2.5 rounded-lg border border-slate-700 bg-slate-800/80 cursor-pointer transition-colors';
+        exp.innerHTML = `💧 <strong>Abastecimento Parcial:</strong> O sistema considerará apenas os <strong>litros colocados</strong> nesta abastecida para acompanhar o rendimento e a autonomia deste combustível.`;
+      }
+      atualizarCalculosAoVivo();
+    }
+
+    function atualizarCalculosAoVivo() {
+      const start = parseFloat(document.getElementById('form-km-inicial').value) || 0;
+      const curr = parseFloat(document.getElementById('form-km-atual').value) || start;
+      const litros = parseFloat(document.getElementById('form-litros').value) || 0;
+      const isAtual = document.getElementById('radio-atual').checked;
+      const isCheio = document.getElementById('radio-tanque-cheio').checked;
+
+      const rodados = Math.max(0, curr - start);
+      document.getElementById('preview-km-rodados').innerText = `+${rodados} km`;
+
+      const consumidos = rodados > 0 ? (rodados / 33.2) : 0;
+      document.getElementById('preview-litros-consumidos').innerText = `${formatarNumero(consumidos, 2)} L`;
+
+      if (isAtual) {
+        const volumeBase = isCheio ? CAPACIDADE_TANQUE : litros;
+        const restantes = Math.max(0, volumeBase - consumidos);
+        const autoRestante = restantes * 33.2;
+
+        if (isCheio) {
+          document.getElementById('preview-label-restante').innerText = 'Resta no Tanque (15,1L)';
+          document.getElementById('preview-litros-restantes').innerText = `${formatarNumero(restantes, 2)} L (~${Math.round(autoRestante)} km)`;
+        } else {
+          document.getElementById('preview-label-restante').innerText = 'Resta da Gasolina';
+          document.getElementById('preview-litros-restantes').innerText = `${formatarNumero(restantes, 2)} L (~${Math.round(autoRestante)} km)`;
+        }
+      } else {
+        document.getElementById('preview-label-restante').innerText = 'Média Real';
+        const media = rodados > 0 && litros > 0 ? (rodados / litros) : 33.2;
+        document.getElementById('preview-litros-restantes').innerText = `${formatarNumero(media, 1)} km/L`;
+      }
+    }
+
+    function renderizar() {
+      window.registros = registros;
+      window.renderizar = renderizar;
+      const corpo = document.getElementById('corpo-tabela');
+      corpo.innerHTML = '';
+
+      const badgeTotal = document.getElementById('badge-total-regs');
+      if (badgeTotal) badgeTotal.innerText = registros.length;
+
+      // Ordenar por data decrescente (mais recente primeiro)
+      const ordenados = [...registros].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+      ordenados.forEach((reg) => {
+        const originalIndex = registros.indexOf(reg);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-850/40 transition-colors cursor-pointer group';
+
+        const kmIni = reg.kmInicial || reg.odometro || 83663;
+        const kmCur = reg.kmAtual || (kmIni + (reg.kmRodados || 0));
+        const distancia = Math.max(0, kmCur - kmIni);
+        const isCheio = reg.isTanqueCheio !== false;
+
+        const statusTag = reg.isAtual 
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">Gasolina Nova</span>` 
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">Ciclo Concluído</span>`;
+
+        const tanqueCheioTag = isCheio
+          ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 ml-1.5" title="Tanque ficou cheio com 15,1 L">⛽ Tanque Cheio (15,1L)</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-800 text-slate-400 border border-slate-700 ml-1.5" title="Abastecimento parcial">💧 Parcial</span>`;
+
+        const kmInfo = distancia > 0
+          ? `<span class="text-emerald-400 font-bold text-sm">+${distancia} km</span>`
+          : (reg.isAtual ? `<span class="text-teal-300 text-[11px]">0 km (em uso)</span>` : `<span class="text-slate-500">0 km</span>`);
+
+        const litrosConsumidos = distancia > 0 ? distancia / 33.2 : 0;
+        const volumeInicial = isCheio ? CAPACIDADE_TANQUE : reg.litros;
+        const litrosRestantes = reg.isAtual 
+          ? Math.max(0, volumeInicial - litrosConsumidos) 
+          : 0;
+        const autonomiaRestante = litrosRestantes * 33.2;
+        const diasRestantes = autonomiaRestante / 33; // 33 km/dia útil de trabalho
+
+        const gasConsumidaCol = reg.isAtual
+          ? `<div>
+              <span class="text-teal-300 font-bold text-sm">${formatarNumero(litrosConsumidos, 2)} L</span>
+              <div class="text-[10px] ${isCheio ? 'text-emerald-300 font-semibold' : 'text-slate-400'}">
+                Resta: <strong>${formatarNumero(litrosRestantes, 2)} L</strong> ${isCheio ? '(de 15,1 L)' : `(de ${formatarNumero(reg.litros, 2)} L)`}
+              </div>
+             </div>`
+          : `<div>
+              <span class="text-slate-200 font-semibold">${formatarNumero(reg.litros, 2)} L</span>
+              <div class="text-[10px] text-slate-500">tanque utilizado</div>
+             </div>`;
+
+        const mediaInfo = reg.isAtual
+          ? `<div class="inline-flex flex-col items-center px-2 py-0.5 rounded bg-teal-500/10 text-teal-300 text-[10px]">
+              <span class="font-bold">Prev: ~${Math.round(autonomiaRestante)} km</span>
+              <span class="text-[9px] text-slate-400">~${diasRestantes.toFixed(1)} dias de trabalho</span>
+             </div>`
+          : (reg.mediaKml ? `<span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">${formatarNumero(reg.mediaKml, 1)} km/L</span>` : '--');
+
+        const precoLitroAtual = reg.preco || 7.19;
+        const custoKmReal = reg.isAtual
+          ? (precoLitroAtual / 33.2)
+          : (reg.custoKm || (reg.kmRodados > 0 ? (reg.total / reg.kmRodados) : 0.22));
+        const valorGastoAteAgora = litrosConsumidos * precoLitroAtual;
+
+        const custoInfo = reg.isAtual 
+          ? `<div>
+              <span class="text-amber-400 font-bold font-mono text-sm">${formatarMoeda(custoKmReal)} / km</span>
+              <div class="text-[10px] text-slate-400 font-sans">Gasto: ${formatarMoeda(valorGastoAteAgora)} (${formatarNumero(litrosConsumidos, 2)} L)</div>
+             </div>` 
+          : `<div>
+              <span class="font-bold text-white font-mono">${formatarMoeda(custoKmReal)} / km</span>
+              <div class="text-[10px] text-slate-500 font-sans">Total: ${formatarMoeda(reg.total)}</div>
+             </div>`;
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 whitespace-nowrap text-white font-medium" onclick="editarRegistro(${originalIndex})">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-sm text-white">${formatarData(reg.data)}</span>
+              ${statusTag}
+            </div>
+            <div class="mt-1 flex items-center">
+              ${tanqueCheioTag}
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">${reg.obs || ''}</div>
+          </td>
+          <td class="py-3 px-3 text-slate-200" onclick="editarRegistro(${originalIndex})">
+            <div class="font-semibold text-white">${formatarNumero(kmIni, 0)} km</div>
+            <div class="text-[9px] text-slate-500">ao abastecer</div>
+          </td>
+          <td class="py-3 px-3 text-emerald-400 font-bold" onclick="event.stopPropagation(); abrirModalOdometro(${originalIndex})">
+            <div class="flex items-center gap-1.5">
+              <span class="text-emerald-300 font-extrabold text-sm underline decoration-emerald-500/40 hover:decoration-emerald-400 cursor-pointer" title="Clique para editar este KM">${formatarNumero(kmCur, 0)} km</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-teal-500 hover:text-slate-950 text-teal-300 border border-slate-700 transition cursor-pointer" title="Clique para alterar o odômetro">⚡ Editar</span>
+            </div>
+            <div class="text-[9px] text-slate-500">painel agora</div>
+          </td>
+          <td class="py-3 px-3" onclick="editarRegistro(${originalIndex})">${kmInfo}</td>
+          <td class="py-3 px-3" onclick="editarRegistro(${originalIndex})">${gasConsumidaCol}</td>
+          <td class="py-3 px-3 text-white" onclick="editarRegistro(${originalIndex})">
+            <div class="font-bold text-white text-sm">${formatarMoeda(reg.total)}</div>
+            <div class="text-[10px] text-slate-400">${formatarNumero(reg.litros, 2)} L a ${formatarMoeda(reg.preco)}</div>
+          </td>
+          <td class="py-3 px-3 text-center" onclick="editarRegistro(${originalIndex})">${mediaInfo}</td>
+          <td class="py-3 px-3 text-slate-300" onclick="editarRegistro(${originalIndex})">${custoInfo}</td>
+          <td class="py-3 px-3 text-center whitespace-nowrap">
+            <div class="flex items-center justify-center gap-1.5">
+              <button type="button" onclick="event.stopPropagation(); editarRegistro(${originalIndex})" class="px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded transition-colors border border-slate-700 cursor-pointer shadow-sm active:scale-95 flex items-center gap-1" title="Editar este abastecimento">
+                <span>✏️</span> <span>Editar</span>
+              </button>
+              <button type="button" onclick="event.stopPropagation(); pedirConfirmacaoExcluir(${originalIndex})" class="text-slate-500 hover:text-rose-400 p-1 text-base font-bold transition-colors cursor-pointer" title="Excluir este abastecimento">&times;</button>
+            </div>
+          </td>
+        `;
+        corpo.appendChild(tr);
+      });
+
+      renderizarKPIs();
+      atualizarCardOleo();
+      calcularSimulador();
+      calcularEtanol();
+    }
+
+    // CONTROLE DE MODAL DE ODÔMETRO (QUICK EDIT)
+    let odometroIndexAlvo = null;
+
+    function abrirModalOdometro(idx = null) {
+      const regAtual = (idx !== null && registros[idx]) 
+        ? registros[idx] 
+        : (registros.find(r => r.isAtual) || registros[0]);
+      odometroIndexAlvo = (idx !== null && registros[idx]) ? idx : registros.indexOf(regAtual);
+
+      const kmAtualAgora = regAtual ? (regAtual.kmAtual || regAtual.kmInicial || 83712) : 83712;
+      const kmIni = regAtual ? (regAtual.kmInicial || regAtual.odometro || 83663) : 83663;
+
+      const input = document.getElementById('input-odometro-rapido');
+      if (input) input.value = kmAtualAgora;
+
+      const elKmIni = document.getElementById('preview-odo-kmini');
+      if (elKmIni) elKmIni.innerText = formatarNumero(kmIni, 0) + ' km';
+
+      atualizarPreviewOdometro();
+
+      const modal = document.getElementById('modal-odometro');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+      setTimeout(() => input && input.focus(), 50);
+    }
+    window.abrirModalOdometro = abrirModalOdometro;
+    window.atualizarKmRapido = abrirModalOdometro;
+
+    function fecharModalOdometro() {
+      const modal = document.getElementById('modal-odometro');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+      }
+      document.body.style.overflow = '';
+    }
+    window.fecharModalOdometro = fecharModalOdometro;
+
+    function adicionarKmOdometro(delta) {
+      const input = document.getElementById('input-odometro-rapido');
+      if (input) {
+        const valAtual = parseFloat(input.value) || 83712;
+        input.value = Math.round(valAtual + delta);
+        atualizarPreviewOdometro();
+      }
+    }
+    window.adicionarKmOdometro = adicionarKmOdometro;
+
+    function atualizarPreviewOdometro() {
+      const regAtual = (odometroIndexAlvo !== null && registros[odometroIndexAlvo])
+        ? registros[odometroIndexAlvo]
+        : (registros.find(r => r.isAtual) || registros[0]);
+      const kmIni = regAtual ? (regAtual.kmInicial || regAtual.odometro || 83663) : 83663;
+      const inputVal = parseFloat(document.getElementById('input-odometro-rapido').value) || kmIni;
+      const rodados = Math.max(0, inputVal - kmIni);
+      const gastos = rodados > 0 ? rodados / 33.2 : 0;
+      const isCheio = regAtual ? (regAtual.isTanqueCheio !== false) : true;
+      const volBase = isCheio ? CAPACIDADE_TANQUE : (regAtual ? regAtual.litros : 5.98);
+      const restantes = Math.max(0, volBase - gastos);
+      const pct = Math.min(100, Math.round((restantes / volBase) * 100));
+
+      const elRodados = document.getElementById('preview-odo-kmrodados');
+      const elGastos = document.getElementById('preview-odo-gastos');
+      const elRestante = document.getElementById('preview-odo-restante');
+
+      if (elRodados) elRodados.innerText = `+${rodados} km`;
+      if (elGastos) elGastos.innerText = `${formatarNumero(gastos, 2)} L`;
+      if (elRestante) elRestante.innerText = `${formatarNumero(restantes, 2)} L (${pct}%)`;
+    }
+    window.atualizarPreviewOdometro = atualizarPreviewOdometro;
+
+    function salvarNovoOdometro(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('input-odometro-rapido');
+      const val = parseFloat(input ? input.value : 0);
+      if (isNaN(val) || val <= 0) {
+        mostrarToast('⚠️ Digite uma quilometragem válida.');
+        return;
+      }
+
+      const regAlvo = (odometroIndexAlvo !== null && registros[odometroIndexAlvo])
+        ? registros[odometroIndexAlvo]
+        : (registros.find(r => r.isAtual) || registros[0]);
+
+      if (regAlvo) {
+        regAlvo.kmAtual = val;
+        regAlvo.kmRodados = Math.max(0, val - (regAlvo.kmInicial || 83663));
+        salvarStorage();
+        renderizar();
+        fecharModalOdometro();
+        mostrarToast(`✅ Odômetro atualizado para ${formatarNumero(val, 0)} km!`);
+      }
+    }
+    window.salvarNovoOdometro = salvarNovoOdometro;
+
+    // CONTROLE DE MODAL DE TROCA DE ÓLEO
+    function abrirModalOleo() {
+      const regAtual = registros.find(r => r.isAtual) || registros[0];
+      const kmAtual = regAtual ? (regAtual.kmAtual || regAtual.kmInicial || 83712) : 83712;
+
+      const input = document.getElementById('input-meta-oleo');
+      if (input) input.value = metaKmOleo;
+
+      const elAtual = document.getElementById('modal-oleo-kmatual');
+      const elUltima = document.getElementById('modal-oleo-kmultima');
+      if (elAtual) elAtual.innerText = formatarNumero(kmAtual, 0) + ' km';
+      if (elUltima) elUltima.innerText = `~${formatarNumero(ultimaTrocaKmOleo, 0)} km`;
+
+      const modal = document.getElementById('modal-oleo');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+      setTimeout(() => input && input.focus(), 50);
+    }
+    window.abrirModalOleo = abrirModalOleo;
+    window.editarMetaOleo = abrirModalOleo;
+
+    function fecharModalOleo() {
+      const modal = document.getElementById('modal-oleo');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+      }
+      document.body.style.overflow = '';
+    }
+    window.fecharModalOleo = fecharModalOleo;
+
+    function setMetaOleoPreset(valor) {
+      const input = document.getElementById('input-meta-oleo');
+      if (input) input.value = valor;
+    }
+    window.setMetaOleoPreset = setMetaOleoPreset;
+
+    function salvarMetaOleo(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('input-meta-oleo');
+      const val = parseFloat(input ? input.value : 0);
+      if (isNaN(val) || val <= 0) {
+        mostrarToast('⚠️ Digite uma meta de km válida.');
+        return;
+      }
+      metaKmOleo = val;
+      salvarStorage('meta-oleo');
+      atualizarCardOleo();
+      fecharModalOleo();
+      mostrarToast(`✅ Meta da troca de óleo atualizada para ${formatarNumero(val, 0)} km!`);
+    }
+    window.salvarMetaOleo = salvarMetaOleo;
+
+    // CONTROLE DE MODAL DE CONFIRMAÇÃO (SEM WINDOW.CONFIRM)
+    let acaoPendente = null;
+
+    function pedirConfirmacaoExcluir(idx) {
+      acaoPendente = () => {
+        registros.splice(idx, 1);
+        salvarStorage();
+        renderizar();
+        mostrarToast('Registro de abastecimento removido.');
+      };
+      const tit = document.getElementById('modal-confirm-titulo');
+      const msg = document.getElementById('modal-confirm-mensagem');
+      const btn = document.getElementById('modal-confirm-btn-acao');
+      if (tit) tit.innerText = 'Excluir Abastecimento';
+      if (msg) msg.innerText = 'Tem certeza que deseja excluir este abastecimento da Fan 2013?';
+      if (btn) {
+        btn.innerText = 'Excluir';
+        btn.className = 'px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-lg cursor-pointer shadow-md';
+      }
+      const modal = document.getElementById('modal-confirm');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+      }
+    }
+    window.pedirConfirmacaoExcluir = pedirConfirmacaoExcluir;
+    window.excluir = pedirConfirmacaoExcluir;
+
+    function pedirConfirmacaoRestaurar() {
+      acaoPendente = () => {
+        registros = JSON.parse(JSON.stringify(DADOS_INICIAIS));
+        metaKmOleo = 84400;
+        ultimaTrocaKmOleo = 83400;
+        salvarStorage();
+        renderizar();
+        mostrarToast('✅ Abastecimentos originais da Fan 2013 restaurados com sucesso!');
+      };
+      const tit = document.getElementById('modal-confirm-titulo');
+      const msg = document.getElementById('modal-confirm-mensagem');
+      const btn = document.getElementById('modal-confirm-btn-acao');
+      if (tit) tit.innerText = 'Restaurar Dados Originais';
+      if (msg) msg.innerText = 'Deseja restaurar os registros originais da Fan 2013 (18/10 e 26/10 com tanque cheio de 15,1L e meta de óleo 84.400 km)?';
+      if (btn) {
+        btn.innerText = 'Restaurar';
+        btn.className = 'px-4 py-2 text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-lg cursor-pointer shadow-md';
+      }
+      const modal = document.getElementById('modal-confirm');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+      }
+    }
+    window.pedirConfirmacaoRestaurar = pedirConfirmacaoRestaurar;
+    window.restaurarDadosOriginais = pedirConfirmacaoRestaurar;
+
+    function executarAcaoConfirmada() {
+      if (typeof acaoPendente === 'function') {
+        acaoPendente();
+      }
+      fecharModalConfirm();
+    }
+    window.executarAcaoConfirmada = executarAcaoConfirmada;
+
+    function fecharModalConfirm() {
+      acaoPendente = null;
+      const modal = document.getElementById('modal-confirm');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+      }
+    }
+    window.fecharModalConfirm = fecharModalConfirm;
+
+    // CONTROLE DE MODAL DE NOVO/EDITAR ABASTECIMENTO (100% GARANTIDO VISÍVEL E EDITÁVEL)
+    function abrirModalNovo() {
+      editandoIndex = null;
+      document.getElementById('modal-titulo').innerText = 'Novo Abastecimento';
+      document.getElementById('form-abastecer').reset();
+      
+      const last = registros.find(r => r.isAtual) || registros[0];
+      const defaultStart = last ? (last.kmAtual || last.odometro || 83712) : 83712;
+      
+      document.getElementById('form-km-inicial').value = defaultStart;
+      document.getElementById('form-km-atual').value = defaultStart;
+      document.getElementById('form-preco').value = '7.19';
+      document.getElementById('form-total').value = '42.99';
+      document.getElementById('form-litros').value = (42.99 / 7.19).toFixed(2);
+      document.getElementById('form-data').value = new Date().toISOString().split('T')[0];
+      document.getElementById('radio-atual').checked = true;
+      document.getElementById('radio-tanque-cheio').checked = true;
+      
+      toggleSituacao();
+      toggleTanqueCheio();
+      
+      const modal = document.getElementById('modal-abastecer');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+    window.abrirModalNovo = abrirModalNovo;
+
+    function editarRegistro(idx) {
+      editandoIndex = idx;
+      const reg = registros[idx];
+      if (!reg) return;
+
+      document.getElementById('modal-titulo').innerText = `Editar Abastecimento (${formatarData(reg.data)})`;
+
+      const kmIni = reg.kmInicial || reg.odometro || 83663;
+      const kmCur = reg.kmAtual || (kmIni + (reg.kmRodados || 0));
+
+      document.getElementById('form-km-inicial').value = kmIni;
+      document.getElementById('form-km-atual').value = kmCur;
+      document.getElementById('form-data').value = reg.data;
+      document.getElementById('form-total').value = reg.total;
+      document.getElementById('form-preco').value = reg.preco;
+      document.getElementById('form-litros').value = reg.litros;
+      document.getElementById('form-obs').value = reg.obs || '';
+
+      if (reg.isAtual) {
+        document.getElementById('radio-atual').checked = true;
+      } else {
+        document.getElementById('radio-concluido').checked = true;
+        document.getElementById('form-km-rodados-concluido').value = reg.kmRodados || '';
+      }
+
+      if (reg.isTanqueCheio !== false) {
+        document.getElementById('radio-tanque-cheio').checked = true;
+      } else {
+        document.getElementById('radio-tanque-parcial').checked = true;
+      }
+
+      toggleSituacao();
+      toggleTanqueCheio();
+      
+      const modal = document.getElementById('modal-abastecer');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+    window.editarRegistro = editarRegistro;
+
+    function fecharModal() {
+      const modal = document.getElementById('modal-abastecer');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+      }
+      document.body.style.overflow = '';
+    }
+    window.fecharModal = fecharModal;
+
+    function aoMudarTotal() {
+      const tot = parseFloat(document.getElementById('form-total').value) || 0;
+      const prc = parseFloat(document.getElementById('form-preco').value) || 0;
+      if (prc > 0) {
+        document.getElementById('form-litros').value = (tot / prc).toFixed(2);
+      }
+      atualizarCalculosAoVivo();
+    }
+
+    function aoMudarPreco() {
+      const tot = parseFloat(document.getElementById('form-total').value) || 0;
+      const prc = parseFloat(document.getElementById('form-preco').value) || 0;
+      if (prc > 0 && tot > 0) {
+        document.getElementById('form-litros').value = (tot / prc).toFixed(2);
+      }
+      atualizarCalculosAoVivo();
+    }
+
+    function aoMudarLitros() {
+      const lit = parseFloat(document.getElementById('form-litros').value) || 0;
+      const prc = parseFloat(document.getElementById('form-preco').value) || 0;
+      if (lit > 0 && prc > 0) {
+        document.getElementById('form-total').value = (lit * prc).toFixed(2);
+      }
+      atualizarCalculosAoVivo();
+    }
+
+    function salvarAbastecimento(e) {
+      e.preventDefault();
+      const kmIni = parseFloat(document.getElementById('form-km-inicial').value) || 0;
+      const kmCur = parseFloat(document.getElementById('form-km-atual').value) || kmIni;
+      const data = document.getElementById('form-data').value;
+      const total = parseFloat(document.getElementById('form-total').value) || 0;
+      const preco = parseFloat(document.getElementById('form-preco').value) || 7.19;
+      const litros = parseFloat(document.getElementById('form-litros').value) || (total / preco);
+      const isAtual = document.getElementById('radio-atual').checked;
+      const isTanqueCheio = document.getElementById('radio-tanque-cheio').checked;
+      const obs = document.getElementById('form-obs').value;
+
+      const distancia = Math.max(0, kmCur - kmIni);
+
+      let mediaKml = null;
+      let custoKm = 0.22;
+      let kmRodados = distancia;
+
+      if (!isAtual) {
+        const kConcluido = parseFloat(document.getElementById('form-km-rodados-concluido').value);
+        if (!isNaN(kConcluido) && kConcluido > 0) {
+          kmRodados = kConcluido;
+        }
+        mediaKml = kmRodados > 0 && litros > 0 ? (kmRodados / litros) : 33.2;
+        custoKm = kmRodados > 0 ? (total / kmRodados) : 0.22;
+      }
+
+      const novo = {
+        id: editandoIndex !== null ? registros[editandoIndex].id : Date.now().toString(),
+        data,
+        isAtual,
+        isTanqueCheio,
+        kmInicial: kmIni,
+        kmAtual: kmCur,
+        odometro: kmIni,
+        kmRodados,
+        litros,
+        preco,
+        total,
+        mediaKml,
+        custoKm,
+        obs
+      };
+
+      if (isAtual) {
+        registros.forEach((r, idx) => {
+          if (idx !== editandoIndex) r.isAtual = false;
+        });
+      }
+
+      if (editandoIndex !== null) {
+        registros[editandoIndex] = novo;
+      } else {
+        registros.push(novo);
+      }
+
+      salvarStorage();
+      renderizar();
+      fecharModal();
+      mostrarToast('✅ Abastecimento salvo com sucesso!');
+    }
+    window.salvarAbastecimento = salvarAbastecimento;
+
+    function excluir(idx) {
+      pedirConfirmacaoExcluir(idx);
+    }
+    window.excluir = excluir;
+
+    function setSimValor(v) {
+      document.getElementById('sim-valor').value = v;
+      calcularSimulador();
+    }
+
+    function calcularSimulador() {
+      const valor = parseFloat(document.getElementById('sim-valor').value) || 0;
+      const preco = parseFloat(document.getElementById('sim-preco').value) || 7.19;
+      const kml = parseFloat(document.getElementById('sim-kml').value) || 33.2;
+      const kmdia = parseFloat(document.getElementById('sim-kmdia').value) || 33;
+
+      const litros = preco > 0 ? valor / preco : 0;
+      const range = litros * kml;
+      const dias = kmdia > 0 ? range / kmdia : 0;
+      const custoKm = range > 0 ? valor / range : (preco / kml);
+      const custoDia = custoKm * kmdia;
+
+      const d = new Date();
+      d.setDate(d.getDate() + Math.round(dias));
+
+      document.getElementById('res-autonomia').innerText = `${Math.round(range)} km`;
+      document.getElementById('res-litros').innerText = `${litros.toFixed(2)} Litros`;
+      document.getElementById('res-dias').innerText = `${dias.toFixed(1)} dias`;
+      document.getElementById('res-custokm').innerText = formatarMoeda(custoKm) + ' / km';
+      document.getElementById('res-custodia').innerText = formatarMoeda(custoDia) + ' / dia';
+      document.getElementById('res-datafim').innerText = d.toLocaleDateString('pt-BR');
+    }
+
+    function calcularEtanol() {
+      const gas = parseFloat(document.getElementById('comp-gas').value) || 7.19;
+      const eta = parseFloat(document.getElementById('comp-eta').value) || 4.59;
+
+      const paridade = gas > 0 ? (eta / gas) * 100 : 0;
+      const compensaEtanol = paridade < 70;
+      const precoMax = gas * 0.7;
+
+      document.getElementById('txt-veredito').innerText = compensaEtanol ? 'Abasteça com ETANOL (Álcool)' : 'Abasteça com GASOLINA';
+      document.getElementById('txt-paridade').innerText = `O etanol está a ${paridade.toFixed(1)}% do preço da gasolina.`;
+      document.getElementById('txt-preco-max').innerText = formatarMoeda(precoMax);
+      document.getElementById('box-veredito').className = `p-4 rounded-xl border mb-4 ${compensaEtanol ? 'bg-blue-950/40 border-blue-800 text-blue-200' : 'bg-amber-950/40 border-amber-800 text-amber-200'}`;
+    }
+
+    function exportarCSV() {
+      let csv = 'Data;KM Inicial;KM Atual;KM Rodados;Tanque Cheio;Litros;Preco Litro;Total Pago;Media kmL;Obs\n';
+      registros.forEach(r => {
+        const ki = r.kmInicial || r.odometro;
+        const ka = r.kmAtual || (ki + (r.kmRodados || 0));
+        csv += `${r.data};${ki};${ka};${r.kmRodados};${r.isTanqueCheio !== false ? 'Sim' : 'Nao'};${r.litros};${r.preco};${r.total};${r.mediaKml ? r.mediaKml.toFixed(2) : ''};"${r.obs || ''}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'abastecimentos_fan2013.csv';
+      link.click();
+    }
+
+    // FUNÇÕES DE SINCRONIZAÇÃO PC <-> CELULAR
+    async function forcarSincronizacao(abrirModalApos = false) {
+      const btn = document.getElementById('btn-sincronizar-topo');
+      const btnModal = document.getElementById('btn-sync-modal-acao');
+      const dot = document.getElementById('dot-cloud-status');
+      const txt = document.getElementById('txt-cloud-status');
+
+      if (btn) btn.innerHTML = '<span>🔄</span> <span class="animate-pulse">Sincronizando...</span>';
+      if (btnModal) btnModal.innerHTML = '<span>🔄</span> <span>Sincronizando com a Nuvem...</span>';
+      if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+      if (txt) txt.innerText = 'Sincronizando...';
+
+      mostrarToast('🔄 Conectando à nuvem e sincronizando dados...');
+
+      try {
+        if (typeof window.buscarNuvem === 'function') {
+          await window.buscarNuvem();
+        }
+        if (typeof window.salvarNuvem === 'function') {
+          await window.salvarNuvem('manual');
+        }
+
+        if (btn) btn.innerHTML = '<span>✅</span> <span>Sincronizado!</span>';
+        if (btnModal) btnModal.innerHTML = '<span>✅</span> <span>Nuvem Sincronizada com Sucesso!</span>';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        if (txt) txt.innerText = 'Nuvem Conectada';
+        mostrarToast('✅ Sincronizado com sucesso! Dados atualizados no PC e celular.');
+      } catch (e) {
+        console.error('Erro na sincronização:', e);
+        if (btn) btn.innerHTML = '<span>⚠️</span> <span>Erro Nuvem</span>';
+        mostrarToast('⚠️ Erro ao sincronizar. Verifique a conexão.');
+      }
+
+      setTimeout(() => {
+        if (btn) btn.innerHTML = '<span>📲</span> <span class="hidden sm:inline">Sincronização</span><span class="sm:hidden">Sync</span>';
+        if (btnModal) btnModal.innerHTML = '<span>🔄</span> <span>Forçar Sincronização Agora</span>';
+      }, 2500);
+
+      if (abrirModalApos) {
+        abrirModalSync();
+      }
+    }
+    window.forcarSincronizacao = forcarSincronizacao;
+
+    function abrirModalSync() {
+      const modal = document.getElementById('modal-sync');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
+      try {
+        gerarSyncLink();
+      } catch (e) {
+        console.warn('Erro ao gerar sync link:', e);
+      }
+    }
+    window.abrirModalSync = abrirModalSync;
+
+    function fecharModalSync() {
+      const modal = document.getElementById('modal-sync');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+    }
+    window.fecharModalSync = fecharModalSync;
+
+    function gerarSyncLink() {
+      let syncUrl = '';
+      try {
+        const jsonStr = JSON.stringify(registros);
+        const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+        if (window.location.protocol.startsWith('http')) {
+          syncUrl = window.location.origin + window.location.pathname + '?sync=' + base64;
+        } else {
+          syncUrl = 'https://ais-dev-e5wi2jjpossqcecnu6rglm-809242935731.us-east1.run.app/autokm.html?sync=' + base64;
+        }
+        const qrImg = document.getElementById('qrcode-img');
+        if (qrImg) {
+          qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(syncUrl);
+        }
+      } catch (e) {
+        console.warn('Erro em gerarSyncLink:', e);
+      }
+      return syncUrl;
+    }
+    window.gerarSyncLink = gerarSyncLink;
+
+    function copiarLinkSync() {
+      const syncUrl = gerarSyncLink();
+      navigator.clipboard.writeText(syncUrl).then(() => {
+        alert('Link de sincronização copiado! Cole no WhatsApp e abra no celular para atualizar seus dados instantaneamente.');
+      }).catch(() => {
+        prompt('Copie o link abaixo para abrir no celular:', syncUrl);
+      });
+    }
+
+    function baixarHtmlAtualizado() {
+      let docHtml = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const jsonAtual = JSON.stringify(registros, null, 2);
+      
+      docHtml = docHtml.replace(
+        /const DADOS_INICIAIS = \[[\s\S]*?\];/,
+        `const DADOS_INICIAIS = ${jsonAtual};`
+      );
+
+      const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'autokm_atualizado.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function copiarCodigoBackup() {
+      const jsonStr = JSON.stringify(registros);
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        alert('Código de backup copiado com sucesso! Você pode colar no WhatsApp ou enviar para si mesmo.');
+      }).catch(() => {
+        prompt('Copie o código de backup abaixo:', jsonStr);
+      });
+    }
+
+    function colarCodigoBackup() {
+      const code = prompt('Cole aqui o código de backup gerado no outro dispositivo:');
+      if (code && code.trim()) {
+        try {
+          const parsed = JSON.parse(code.trim());
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            registros = parsed;
+            salvarStorage();
+            renderizar();
+            alert('Dados sincronizados com sucesso!');
+            fecharModalSync();
+          } else {
+            alert('O código colado não contém abastecimentos válidos.');
+          }
+        } catch (e) {
+          alert('Código inválido. Certifique-se de copiar todo o conteúdo.');
+        }
+      }
+    }
+
+    function atualizarStatusNuvem(status) {
+      const dot = document.getElementById('dot-cloud-status');
+      const txt = document.getElementById('txt-cloud-status');
+      if (!dot || !txt) return;
+      if (status === 'connected') {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        txt.innerText = 'Nuvem Conectada';
+        txt.className = 'text-emerald-300 font-mono text-[11px] hidden sm:inline';
+      } else if (status === 'syncing') {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+        txt.innerText = 'Sincronizando...';
+        txt.className = 'text-amber-300 font-mono text-[11px] hidden sm:inline';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-rose-400';
+        txt.innerText = 'Nuvem Offline';
+        txt.className = 'text-rose-300 font-mono text-[11px] hidden sm:inline';
+      }
+    }
+    window.atualizarStatusNuvem = atualizarStatusNuvem;
+
+    function mostrarToast(msg) {
+      const toast = document.getElementById('toast-nuvem');
+      const txt = document.getElementById('toast-nuvem-msg');
+      if (toast && txt) {
+        txt.innerText = msg;
+        toast.classList.remove('translate-y-20', 'opacity-0');
+        setTimeout(() => {
+          toast.classList.add('translate-y-20', 'opacity-0');
+        }, 3500);
+      }
+    }
+    window.mostrarToast = mostrarToast;
+
+    // Inicialização ao carregar
+    renderizar();
+  </script>
+
+  <!-- FIREBASE CLOUD SYNC (Sincronização em Tempo Real via Nuvem) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      projectId: "decent-tangent-683d0",
+      appId: "1:303049189006:web:e9950fed4429e246148bdf",
+      apiKey: "AIzaSyBG22-_PlDDCj4bZ4eDECAMAgjTBQXlxpc",
+      authDomain: "decent-tangent-683d0.firebaseapp.com",
+      firestoreDatabaseId: "ai-studio-autokmcontrolede-7d3edb47-e140-41b2-8832-d2335788f495",
+      storageBucket: "decent-tangent-683d0.firebasestorage.app",
+      messagingSenderId: "303049189006"
+    };
+
+    let db = null;
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app, "ai-studio-autokmcontrolede-7d3edb47-e140-41b2-8832-d2335788f495");
+      window.atualizarStatusNuvem && window.atualizarStatusNuvem('connected');
+    } catch (e) {
+      console.warn("Erro ao iniciar Firebase:", e);
+      window.atualizarStatusNuvem && window.atualizarStatusNuvem('offline');
+    }
+
+    // Salva na nuvem ao alterar qualquer valor
+    window.salvarNuvem = async function(origem = 'usuario') {
+      if (!db || !window.registros) return;
+      try {
+        window.atualizarStatusNuvem && window.atualizarStatusNuvem('syncing');
+        const docRef = doc(db, 'vehicles', 'fan2013');
+        await setDoc(docRef, {
+          registros: window.registros,
+          metaKmOleo: window.metaKmOleo || 84400,
+          ultimaTrocaKmOleo: window.ultimaTrocaKmOleo || 83400,
+          updatedAt: new Date().toISOString(),
+          origem: origem
+        }, { merge: true });
+        window.atualizarStatusNuvem && window.atualizarStatusNuvem('connected');
+      } catch (err) {
+        console.error("Erro ao salvar na nuvem:", err);
+        window.atualizarStatusNuvem && window.atualizarStatusNuvem('offline');
+      }
+    };
+
+    // Busca dados mais recentes diretamente da nuvem
+    window.buscarNuvem = async function() {
+      if (!db) return false;
+      try {
+        const docRef = doc(db, 'vehicles', 'fan2013');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const dadosNuvem = docSnap.data();
+          if (dadosNuvem && Array.isArray(dadosNuvem.registros) && dadosNuvem.registros.length > 0) {
+            window.registros = dadosNuvem.registros;
+            if (dadosNuvem.metaKmOleo) {
+              window.metaKmOleo = dadosNuvem.metaKmOleo;
+              localStorage.setItem('autokm_meta_oleo', window.metaKmOleo);
+            }
+            if (dadosNuvem.ultimaTrocaKmOleo) {
+              window.ultimaTrocaKmOleo = dadosNuvem.ultimaTrocaKmOleo;
+              localStorage.setItem('autokm_ultima_troca_oleo', window.ultimaTrocaKmOleo);
+            }
+            localStorage.setItem('autokm_dados_v6', JSON.stringify(window.registros));
+            if (typeof window.renderizar === 'function') window.renderizar();
+            return true;
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao buscar da nuvem:", err);
+      }
+      return false;
+    };
+
+    // Ouvinte em tempo real: sincroniza instantaneamente qualquer ajuste feito no PC ou celular
+    if (db) {
+      const docRef = doc(db, 'vehicles', 'fan2013');
+      onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const dadosNuvem = docSnap.data();
+          if (dadosNuvem && Array.isArray(dadosNuvem.registros) && dadosNuvem.registros.length > 0) {
+            const strNuvem = JSON.stringify(dadosNuvem.registros);
+            const strLocal = JSON.stringify(window.registros);
+            
+            if (strNuvem !== strLocal) {
+              window.registros = dadosNuvem.registros;
+              if (dadosNuvem.metaKmOleo) {
+                window.metaKmOleo = dadosNuvem.metaKmOleo;
+                localStorage.setItem('autokm_meta_oleo', window.metaKmOleo);
+              }
+              if (dadosNuvem.ultimaTrocaKmOleo) {
+                window.ultimaTrocaKmOleo = dadosNuvem.ultimaTrocaKmOleo;
+                localStorage.setItem('autokm_ultima_troca_oleo', window.ultimaTrocaKmOleo);
+              }
+              
+              localStorage.setItem('autokm_dados_v6', JSON.stringify(window.registros));
+              
+              if (typeof window.renderizar === 'function') {
+                window.renderizar();
+              }
+              if (typeof window.mostrarToast === 'function') {
+                window.mostrarToast('☁️ Dados sincronizados da Nuvem!');
+              }
+            }
+          }
+          window.atualizarStatusNuvem && window.atualizarStatusNuvem('connected');
+        } else {
+          // Documento inicial ainda não gravado, inicializa a nuvem com os dados da Fan 2013
+          window.salvarNuvem('seed-inicial');
+        }
+      }, (err) => {
+        console.warn("Aviso Firebase listener:", err);
+        window.atualizarStatusNuvem && window.atualizarStatusNuvem('offline');
+      });
+    }
+  </script>
+</body>
+</html>

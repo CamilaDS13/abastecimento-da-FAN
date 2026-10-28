@@ -1,0 +1,6 @@
+{
+  "name": "AutoKm - Controle de Consumo & Combustível",
+  "description": "Controle completo de abastecimentos, cálculo de km por litro, custo por km, média diária e simulações de viagem.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

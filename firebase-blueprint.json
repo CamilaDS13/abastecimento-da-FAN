@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "VehicleData": {
+      "title": "VehicleData",
+      "description": "Vehicle fuel records, odometer calibration, and maintenance settings for real-time multi-device sync.",
+      "type": "object",
+      "properties": {
+        "vehicleId": {
+          "type": "string",
+          "description": "Identifier for the vehicle"
+        },
+        "registros": {
+          "type": "array",
+          "description": "List of fuel entries"
+        },
+        "metaKmOleo": {
+          "type": "number",
+          "description": "Target KM for next oil change"
+        },
+        "ultimaTrocaKmOleo": {
+          "type": "number",
+          "description": "KM of last oil change"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of the last update"
+        }
+      },
+      "required": ["registros", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/vehicles/{vehicleId}": {
+      "schema": "VehicleData",
+      "description": "Collection of vehicle tracker data synchronizing live across PC and mobile."
+    }
+  }
+}
